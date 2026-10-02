@@ -23,6 +23,150 @@ type IngredienteLocal = {
   quantidade: string;
 };
 
+// Renderiza Markdown simples sem dependência externa.
+// Suporta: ## headings, **bold**, - listas, linhas em branco.
+function MarkdownText({ text }: { text: string }) {
+  const lines = text.split("\n");
+
+  return (
+    <View>
+      {lines.map((line, i) => {
+        // Heading nível 1 ou 2 (## ou #)
+        if (/^#{1,2}\s/.test(line)) {
+          const content = line.replace(/^#+\s*/, "");
+          return (
+            <Text key={i} style={md.heading}>
+              {renderInline(content)}
+            </Text>
+          );
+        }
+
+        // Heading nível 3 (###)
+        if (/^###\s/.test(line)) {
+          const content = line.replace(/^###\s*/, "");
+          return (
+            <Text key={i} style={md.subheading}>
+              {renderInline(content)}
+            </Text>
+          );
+        }
+
+        // Item de lista (- ou * ou número.)
+        if (/^[-*]\s/.test(line)) {
+          const content = line.replace(/^[-*]\s*/, "");
+          return (
+            <View key={i} style={md.listRow}>
+              <Text style={md.bullet}>•</Text>
+              <Text style={md.listText}>{renderInline(content)}</Text>
+            </View>
+          );
+        }
+
+        if (/^\d+\.\s/.test(line)) {
+          const match = line.match(/^(\d+)\.\s(.*)/);
+          const num = match?.[1] ?? "";
+          const content = match?.[2] ?? line;
+          return (
+            <View key={i} style={md.listRow}>
+              <Text style={md.bullet}>{num}.</Text>
+              <Text style={md.listText}>{renderInline(content)}</Text>
+            </View>
+          );
+        }
+
+        // Linha em branco → espaçamento
+        if (line.trim() === "") {
+          return <View key={i} style={{ height: 8 }} />;
+        }
+
+        // Parágrafo normal
+        return (
+          <Text key={i} style={md.paragraph}>
+            {renderInline(line)}
+          </Text>
+        );
+      })}
+    </View>
+  );
+}
+
+// Renderiza **bold** e *italic* dentro de uma linha de texto.
+function renderInline(text: string): React.ReactNode[] {
+  const parts: React.ReactNode[] = [];
+  // Divide por **bold** ou *italic*
+  const regex = /(\*\*[^*]+\*\*|\*[^*]+\*)/g;
+  let last = 0;
+  let match;
+
+  while ((match = regex.exec(text)) !== null) {
+    if (match.index > last) {
+      parts.push(text.slice(last, match.index));
+    }
+    const raw = match[0];
+    if (raw.startsWith("**")) {
+      parts.push(
+        <Text key={match.index} style={{ fontWeight: "700", color: "#fff" }}>
+          {raw.slice(2, -2)}
+        </Text>,
+      );
+    } else {
+      parts.push(
+        <Text key={match.index} style={{ fontStyle: "italic", color: "#ccc" }}>
+          {raw.slice(1, -1)}
+        </Text>,
+      );
+    }
+    last = match.index + raw.length;
+  }
+
+  if (last < text.length) {
+    parts.push(text.slice(last));
+  }
+
+  return parts;
+}
+
+const md = StyleSheet.create({
+  heading: {
+    color: "#fff",
+    fontSize: 17,
+    fontWeight: "700",
+    marginTop: 16,
+    marginBottom: 6,
+    lineHeight: 24,
+  },
+  subheading: {
+    color: "#ccc",
+    fontSize: 15,
+    fontWeight: "600",
+    marginTop: 12,
+    marginBottom: 4,
+  },
+  paragraph: {
+    color: "#ddd",
+    fontSize: 15,
+    lineHeight: 24,
+  },
+  listRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    marginBottom: 4,
+    gap: 6,
+  },
+  bullet: {
+    color: "#4CAF50",
+    fontSize: 15,
+    lineHeight: 24,
+    minWidth: 18,
+  },
+  listText: {
+    color: "#ddd",
+    fontSize: 15,
+    lineHeight: 24,
+    flex: 1,
+  },
+});
+
 export default function Geladeira() {
   const { perfil, salvarFavorito, refeicaoSessao, setRefeicaoSessao } =
     useApp();
@@ -357,7 +501,7 @@ export default function Geladeira() {
                 </Text>
               </View>
             ) : (
-              <Text style={styles.receitaTexto}>{receitaGerada}</Text>
+              <MarkdownText text={receitaGerada} />
             )}
           </ScrollView>
 
@@ -517,7 +661,6 @@ const styles = StyleSheet.create({
   receitaScroll: { flex: 1 },
   loadingBox: { alignItems: "center", paddingTop: 80, gap: 16 },
   loadingText: { color: "#888", fontSize: 15 },
-  receitaTexto: { color: "#ddd", fontSize: 15, lineHeight: 24 },
   modalFooter: {
     padding: 16,
     paddingBottom: Platform.OS === "ios" ? 32 : 16,

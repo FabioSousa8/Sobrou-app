@@ -1,16 +1,15 @@
 import { router } from "expo-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
-    Alert,
-    KeyboardAvoidingView,
-    Platform,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { useApp } from "../Services/AppContext";
 import { salvarPerfil } from "../Services/storage";
@@ -58,6 +57,17 @@ export default function MeuPerfil() {
     perfil?.comidasFavoritas || "",
   );
 
+  // Sincroniza se o contexto terminar de carregar depois que a tela montou
+  useEffect(() => {
+    if (!perfil) return;
+    setNome(perfil.nome || "");
+    setDietas(perfil.dietas || []);
+    setAlergias(perfil.alergias || []);
+    setNivel(perfil.nivel || "iniciante");
+    setRefeicaoPreferida(perfil.refeicaoPreferida || "almoço");
+    setComidasFavoritas(perfil.comidasFavoritas || "");
+  }, [perfil]);
+
   function toggleDieta(val: string) {
     setDietas((prev) =>
       prev.includes(val) ? prev.filter((d) => d !== val) : [...prev, val],
@@ -86,175 +96,152 @@ export default function MeuPerfil() {
     await salvarPerfil(perfilAtualizado);
     setPerfil(perfilAtualizado);
     Alert.alert("✅ Perfil salvo!", "Suas preferências foram atualizadas.", [
-      { text: "OK", onPress: () => router.replace('/geladeira' as any) },
+      { text: "OK", onPress: () => router.replace("/geladeira" as any) },
     ]);
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+    >
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={{ paddingBottom: 40 }}
       >
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.replace('/geladeira' as any)}>
-            <Text style={styles.voltar}>← Voltar</Text>
-          </TouchableOpacity>
-          <Text style={styles.headerTitulo}>Meu perfil</Text>
-          <View style={{ width: 60 }} />
+        <View style={styles.card}>
+          <Text style={styles.cardTitulo}>👤 Nome</Text>
+          <TextInput
+            style={styles.input}
+            value={nome}
+            onChangeText={setNome}
+            placeholder="Seu nome..."
+            placeholderTextColor="#555"
+          />
         </View>
 
-        <ScrollView
-          style={styles.scroll}
-          contentContainerStyle={{ paddingBottom: 40 }}
-        >
-          <View style={styles.card}>
-            <Text style={styles.cardTitulo}>👤 Nome</Text>
-            <TextInput
-              style={styles.input}
-              value={nome}
-              onChangeText={setNome}
-              placeholder="Seu nome..."
-              placeholderTextColor="#555"
-            />
-          </View>
-
-          <View style={styles.card}>
-            <Text style={styles.cardTitulo}>🥗 Restrições alimentares</Text>
-            <View style={styles.chipWrap}>
-              {DIETAS.map((d) => (
-                <TouchableOpacity
-                  key={d}
+        <View style={styles.card}>
+          <Text style={styles.cardTitulo}>🥗 Restrições alimentares</Text>
+          <View style={styles.chipWrap}>
+            {DIETAS.map((d) => (
+              <TouchableOpacity
+                key={d}
+                style={[styles.chip, dietas.includes(d) && styles.chipSelGreen]}
+                onPress={() => toggleDieta(d)}
+              >
+                <Text
                   style={[
-                    styles.chip,
-                    dietas.includes(d) && styles.chipSelGreen,
+                    styles.chipText,
+                    dietas.includes(d) && styles.chipTextGreen,
                   ]}
-                  onPress={() => toggleDieta(d)}
                 >
-                  <Text
-                    style={[
-                      styles.chipText,
-                      dietas.includes(d) && styles.chipTextGreen,
-                    ]}
-                  >
-                    {d}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
+                  {d}
+                </Text>
+              </TouchableOpacity>
+            ))}
           </View>
+        </View>
 
-          <View style={styles.card}>
-            <Text style={styles.cardTitulo}>⚠️ Alergias</Text>
-            <View style={styles.chipWrap}>
-              {ALERGIAS.map((a) => (
-                <TouchableOpacity
-                  key={a}
+        <View style={styles.card}>
+          <Text style={styles.cardTitulo}>⚠️ Alergias</Text>
+          <View style={styles.chipWrap}>
+            {ALERGIAS.map((a) => (
+              <TouchableOpacity
+                key={a}
+                style={[
+                  styles.chip,
+                  alergias.includes(a) && styles.chipSelAmber,
+                ]}
+                onPress={() => toggleAlergia(a)}
+              >
+                <Text
                   style={[
-                    styles.chip,
-                    alergias.includes(a) && styles.chipSelAmber,
+                    styles.chipText,
+                    alergias.includes(a) && styles.chipTextAmber,
                   ]}
-                  onPress={() => toggleAlergia(a)}
                 >
-                  <Text
-                    style={[
-                      styles.chipText,
-                      alergias.includes(a) && styles.chipTextAmber,
-                    ]}
-                  >
-                    {a}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
+                  {a}
+                </Text>
+              </TouchableOpacity>
+            ))}
           </View>
+        </View>
 
-          <View style={styles.card}>
-            <Text style={styles.cardTitulo}>👨‍🍳 Nível na cozinha</Text>
-            <View style={styles.chipWrap}>
-              {NIVEIS.map((n) => (
-                <TouchableOpacity
-                  key={n.val}
-                  style={[styles.chip, nivel === n.val && styles.chipSelBlue]}
-                  onPress={() => setNivel(n.val)}
-                >
-                  <Text
-                    style={[
-                      styles.chipText,
-                      nivel === n.val && styles.chipTextBlue,
-                    ]}
-                  >
-                    {n.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-
-          <View style={styles.card}>
-            <Text style={styles.cardTitulo}>🍽️ Refeição preferida</Text>
-            <View style={styles.chipWrap}>
-              {REFEICOES.map((r) => (
-                <TouchableOpacity
-                  key={r.val}
+        <View style={styles.card}>
+          <Text style={styles.cardTitulo}>👨‍🍳 Nível na cozinha</Text>
+          <View style={styles.chipWrap}>
+            {NIVEIS.map((n) => (
+              <TouchableOpacity
+                key={n.val}
+                style={[styles.chip, nivel === n.val && styles.chipSelBlue]}
+                onPress={() => setNivel(n.val)}
+              >
+                <Text
                   style={[
-                    styles.chip,
-                    refeicaoPreferida === r.val && styles.chipSelGreen,
+                    styles.chipText,
+                    nivel === n.val && styles.chipTextBlue,
                   ]}
-                  onPress={() => setRefeicaoPreferida(r.val)}
                 >
-                  <Text
-                    style={[
-                      styles.chipText,
-                      refeicaoPreferida === r.val && styles.chipTextGreen,
-                    ]}
-                  >
-                    {r.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
+                  {n.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
           </View>
+        </View>
 
-          <View style={styles.card}>
-            <Text style={styles.cardTitulo}>❤️ Pratos favoritos</Text>
-            <Text style={styles.cardDica}>
-              A IA vai sugerir versões adaptadas dos seus pratos preferidos.
-            </Text>
-            <TextInput
-              style={[
-                styles.input,
-                { height: 100, textAlignVertical: "top", paddingTop: 12 },
-              ]}
-              value={comidasFavoritas}
-              onChangeText={setComidasFavoritas}
-              placeholder="Ex: frango à milanesa, lasanha, tacos..."
-              placeholderTextColor="#555"
-              multiline
-            />
+        <View style={styles.card}>
+          <Text style={styles.cardTitulo}>🍽️ Refeição preferida</Text>
+          <View style={styles.chipWrap}>
+            {REFEICOES.map((r) => (
+              <TouchableOpacity
+                key={r.val}
+                style={[
+                  styles.chip,
+                  refeicaoPreferida === r.val && styles.chipSelGreen,
+                ]}
+                onPress={() => setRefeicaoPreferida(r.val)}
+              >
+                <Text
+                  style={[
+                    styles.chipText,
+                    refeicaoPreferida === r.val && styles.chipTextGreen,
+                  ]}
+                >
+                  {r.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
           </View>
+        </View>
 
-          <TouchableOpacity style={styles.salvarBtn} onPress={salvar}>
-            <Text style={styles.salvarBtnText}>💾 Salvar alterações</Text>
-          </TouchableOpacity>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+        <View style={styles.card}>
+          <Text style={styles.cardTitulo}>❤️ Pratos favoritos</Text>
+          <Text style={styles.cardDica}>
+            A IA vai sugerir versões adaptadas dos seus pratos preferidos.
+          </Text>
+          <TextInput
+            style={[
+              styles.input,
+              { height: 100, textAlignVertical: "top", paddingTop: 12 },
+            ]}
+            value={comidasFavoritas}
+            onChangeText={setComidasFavoritas}
+            placeholder="Ex: frango à milanesa, lasanha, tacos..."
+            placeholderTextColor="#555"
+            multiline
+          />
+        </View>
+
+        <TouchableOpacity style={styles.salvarBtn} onPress={salvar}>
+          <Text style={styles.salvarBtnText}>💾 Salvar alterações</Text>
+        </TouchableOpacity>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#0a0a0a" },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    padding: 16,
-    borderBottomWidth: 0.5,
-    borderBottomColor: "#222",
-  },
-  voltar: { color: "#4CAF50", fontSize: 15, width: 60 },
-  headerTitulo: { fontSize: 17, fontWeight: "700", color: "#fff" },
   scroll: { flex: 1, padding: 16 },
   card: {
     backgroundColor: "#1a1a1a",
