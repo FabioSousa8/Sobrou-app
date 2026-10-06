@@ -3,18 +3,20 @@ import * as ImagePicker from "expo-image-picker";
 import { useState } from "react";
 import {
   ActivityIndicator,
-  KeyboardAvoidingView,
   Alert,
+  KeyboardAvoidingView,
   Modal,
   Platform,
   Pressable,
   ScrollView,
+  Share,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
+import { MarkdownText } from "../components/MarkdownText";
 import { useApp } from "../Services/AppContext";
 import { gerarTexto, identificarIngredientes } from "../Services/ia";
 
@@ -22,150 +24,6 @@ type IngredienteLocal = {
   nome: string;
   quantidade: string;
 };
-
-// Renderiza Markdown simples sem dependência externa.
-// Suporta: ## headings, **bold**, - listas, linhas em branco.
-function MarkdownText({ text }: { text: string }) {
-  const lines = text.split("\n");
-
-  return (
-    <View>
-      {lines.map((line, i) => {
-        // Heading nível 1 ou 2 (## ou #)
-        if (/^#{1,2}\s/.test(line)) {
-          const content = line.replace(/^#+\s*/, "");
-          return (
-            <Text key={i} style={md.heading}>
-              {renderInline(content)}
-            </Text>
-          );
-        }
-
-        // Heading nível 3 (###)
-        if (/^###\s/.test(line)) {
-          const content = line.replace(/^###\s*/, "");
-          return (
-            <Text key={i} style={md.subheading}>
-              {renderInline(content)}
-            </Text>
-          );
-        }
-
-        // Item de lista (- ou * ou número.)
-        if (/^[-*]\s/.test(line)) {
-          const content = line.replace(/^[-*]\s*/, "");
-          return (
-            <View key={i} style={md.listRow}>
-              <Text style={md.bullet}>•</Text>
-              <Text style={md.listText}>{renderInline(content)}</Text>
-            </View>
-          );
-        }
-
-        if (/^\d+\.\s/.test(line)) {
-          const match = line.match(/^(\d+)\.\s(.*)/);
-          const num = match?.[1] ?? "";
-          const content = match?.[2] ?? line;
-          return (
-            <View key={i} style={md.listRow}>
-              <Text style={md.bullet}>{num}.</Text>
-              <Text style={md.listText}>{renderInline(content)}</Text>
-            </View>
-          );
-        }
-
-        // Linha em branco → espaçamento
-        if (line.trim() === "") {
-          return <View key={i} style={{ height: 8 }} />;
-        }
-
-        // Parágrafo normal
-        return (
-          <Text key={i} style={md.paragraph}>
-            {renderInline(line)}
-          </Text>
-        );
-      })}
-    </View>
-  );
-}
-
-// Renderiza **bold** e *italic* dentro de uma linha de texto.
-function renderInline(text: string): React.ReactNode[] {
-  const parts: React.ReactNode[] = [];
-  // Divide por **bold** ou *italic*
-  const regex = /(\*\*[^*]+\*\*|\*[^*]+\*)/g;
-  let last = 0;
-  let match;
-
-  while ((match = regex.exec(text)) !== null) {
-    if (match.index > last) {
-      parts.push(text.slice(last, match.index));
-    }
-    const raw = match[0];
-    if (raw.startsWith("**")) {
-      parts.push(
-        <Text key={match.index} style={{ fontWeight: "700", color: "#fff" }}>
-          {raw.slice(2, -2)}
-        </Text>,
-      );
-    } else {
-      parts.push(
-        <Text key={match.index} style={{ fontStyle: "italic", color: "#ccc" }}>
-          {raw.slice(1, -1)}
-        </Text>,
-      );
-    }
-    last = match.index + raw.length;
-  }
-
-  if (last < text.length) {
-    parts.push(text.slice(last));
-  }
-
-  return parts;
-}
-
-const md = StyleSheet.create({
-  heading: {
-    color: "#fff",
-    fontSize: 17,
-    fontWeight: "700",
-    marginTop: 16,
-    marginBottom: 6,
-    lineHeight: 24,
-  },
-  subheading: {
-    color: "#ccc",
-    fontSize: 15,
-    fontWeight: "600",
-    marginTop: 12,
-    marginBottom: 4,
-  },
-  paragraph: {
-    color: "#ddd",
-    fontSize: 15,
-    lineHeight: 24,
-  },
-  listRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    marginBottom: 4,
-    gap: 6,
-  },
-  bullet: {
-    color: "#4CAF50",
-    fontSize: 15,
-    lineHeight: 24,
-    minWidth: 18,
-  },
-  listText: {
-    color: "#ddd",
-    fontSize: 15,
-    lineHeight: 24,
-    flex: 1,
-  },
-});
 
 export default function Geladeira() {
   const { perfil, salvarFavorito, refeicaoSessao, setRefeicaoSessao } =
@@ -291,6 +149,21 @@ export default function Geladeira() {
     });
     setReceitaSalva(true);
     Alert.alert("✅ Salvo!", "Receita adicionada aos seus favoritos.");
+  };
+
+  const handleCompartilhar = async () => {
+    if (!receitaGerada) return;
+    const titulo =
+      receitaGerada.split("\n")[0].replace(/[#*]/g, "").trim() ||
+      "Receita";
+    try {
+      await Share.share({
+        message: `🍽️ ${titulo}\n\n${receitaGerada}\n\n— Compartilhado via Sobrou?`,
+        title: titulo,
+      });
+    } catch (e: any) {
+      Alert.alert("Erro ao compartilhar", e.message);
+    }
   };
 
   const QUANTIDADES = ["pouco", "médio", "bastante"];
@@ -507,15 +380,23 @@ export default function Geladeira() {
 
           {!gerando && receitaGerada ? (
             <View style={styles.modalFooter}>
-              <TouchableOpacity
-                style={[styles.btnSalvar, receitaSalva && styles.btnSalvarJa]}
-                onPress={handleSalvar}
-                disabled={receitaSalva}
-              >
-                <Text style={styles.btnSalvarText}>
-                  {receitaSalva ? "✅ Salvo!" : "⭐ Salvar receita"}
-                </Text>
-              </TouchableOpacity>
+              <View style={styles.botoesRow}>
+                <TouchableOpacity
+                  style={styles.btnCompartilhar}
+                  onPress={handleCompartilhar}
+                >
+                  <Text style={styles.btnCompartilharText}>📤 Compartilhar</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.btnSalvar, receitaSalva && styles.btnSalvarJa]}
+                  onPress={handleSalvar}
+                  disabled={receitaSalva}
+                >
+                  <Text style={styles.btnSalvarText}>
+                    {receitaSalva ? "✅ Salvo!" : "⭐ Salvar"}
+                  </Text>
+                </TouchableOpacity>
+              </View>
             </View>
           ) : null}
         </View>
@@ -667,12 +548,27 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: "#222",
   },
+  botoesRow: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  btnCompartilhar: {
+    flex: 1,
+    backgroundColor: "#1a1a1a",
+    borderWidth: 1,
+    borderColor: "#444",
+    borderRadius: 12,
+    padding: 14,
+    alignItems: "center",
+  },
+  btnCompartilharText: { color: "#aaa", fontSize: 15, fontWeight: "600" },
   btnSalvar: {
+    flex: 1,
     backgroundColor: "#4CAF50",
     borderRadius: 12,
     padding: 14,
     alignItems: "center",
   },
-  btnSalvarJa: { backgroundColor: "#2a2a2a" },
+  btnSalvarJa: { backgroundColor: "#2a2a2a", borderColor: "#333", borderWidth: 1 },
   btnSalvarText: { color: "#fff", fontSize: 15, fontWeight: "700" },
 });

@@ -12,6 +12,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { MarkdownText } from "../components/MarkdownText";
 import { ReceitaSalva, useApp } from "../Services/AppContext";
 
 // ─── Componente estrelas ───────────────────────────────────────────────────
@@ -239,7 +240,7 @@ export default function Favoritos() {
               {/* Texto da receita */}
               <View style={styles.secao}>
                 <Text style={styles.secaoLabel}>Receita completa</Text>
-                <Text style={styles.receitaTexto}>{receitaAberta.conteudo}</Text>
+                <MarkdownText text={receitaAberta.conteudo} />
               </View>
             </ScrollView>
 
