@@ -137,10 +137,6 @@ export default function Layout() {
           }}
         />
 
-        {/* Telas legadas / escondidas */}
-        <Tabs.Screen name="perfil" options={{ href: null }} />
-        <Tabs.Screen name="explore" options={{ href: null }} />
-        <Tabs.Screen name="configurar-api" options={{ href: null }} />
       </Tabs>
     </AppProvider>
   );

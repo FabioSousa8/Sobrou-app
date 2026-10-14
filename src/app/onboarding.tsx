@@ -1,6 +1,7 @@
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
+  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -21,6 +22,7 @@ const DIETAS = [
   "🥑 Cetogênica",
   "📉 Low carb",
 ];
+
 const ALERGIAS = [
   "🥜 Amendoim",
   "🦐 Frutos do mar",
@@ -30,8 +32,20 @@ const ALERGIAS = [
   "🥛 Leite",
   "🌰 Nozes",
 ];
-const NIVEIS = ["🟢 Iniciante", "🟡 Intermediário", "🔴 Avançado"];
-const REFEICOES = ["☀️ Café da manhã", "🌤️ Almoço", "🌙 Jantar", "🍎 Lanche"];
+
+// Valores normalizados — mesmos usados em meu-perfil.tsx
+const NIVEIS = [
+  { label: "🔰 Iniciante", val: "iniciante" },
+  { label: "🍳 Intermediário", val: "intermediário" },
+  { label: "👨‍🍳 Avançado", val: "avançado" },
+];
+
+const REFEICOES = [
+  { label: "☀️ Café da manhã", val: "café da manhã" },
+  { label: "🌤️ Almoço", val: "almoço" },
+  { label: "🌙 Jantar", val: "jantar" },
+  { label: "🍎 Lanche", val: "lanche" },
+];
 
 export default function Onboarding() {
   const router = useRouter();
@@ -59,6 +73,12 @@ export default function Onboarding() {
   };
 
   const avancar = async () => {
+    // Validações por etapa
+    if (etapa === 0 && !nome.trim()) {
+      Alert.alert("Nome obrigatório", "Por favor, insira seu nome para continuar.");
+      return;
+    }
+
     if (etapa < totalEtapas - 1) {
       setEtapa(etapa + 1);
     } else {
@@ -70,7 +90,7 @@ export default function Onboarding() {
           .filter(Boolean),
       ];
       const perfilFinal = {
-        nome,
+        nome: nome.trim(),
         dietas,
         alergias: todasAlergias,
         nivel,
@@ -105,6 +125,9 @@ export default function Onboarding() {
               onChangeText={setNome}
               placeholder="Seu nome ou apelido..."
               placeholderTextColor="#666"
+              autoFocus
+              returnKeyType="next"
+              onSubmitEditing={avancar}
             />
           </View>
         );
@@ -113,7 +136,8 @@ export default function Onboarding() {
           <View style={styles.etapaContainer}>
             <Text style={styles.titulo}>🥗 Tipo de dieta</Text>
             <Text style={styles.subtitulo}>
-              Você segue alguma dieta especial?
+              Você segue alguma dieta especial?{"\n"}
+              <Text style={styles.opcional}>(Opcional — pule se não se aplica)</Text>
             </Text>
             <View style={styles.chips}>
               {DIETAS.map((d) => (
@@ -140,7 +164,8 @@ export default function Onboarding() {
           <View style={styles.etapaContainer}>
             <Text style={styles.titulo}>⚠️ Alergias</Text>
             <Text style={styles.subtitulo}>
-              Você tem alguma alergia alimentar?
+              Você tem alguma alergia alimentar?{"\n"}
+              <Text style={styles.opcional}>(Opcional — a IA vai evitar esses ingredientes)</Text>
             </Text>
             <View style={styles.chips}>
               {ALERGIAS.map((a) => (
@@ -185,17 +210,17 @@ export default function Onboarding() {
             <View style={styles.chips}>
               {NIVEIS.map((n) => (
                 <TouchableOpacity
-                  key={n}
-                  style={[styles.chip, nivel === n && styles.chipAtivo]}
-                  onPress={() => setNivel(n)}
+                  key={n.val}
+                  style={[styles.chip, nivel === n.val && styles.chipAtivo]}
+                  onPress={() => setNivel(n.val)}
                 >
                   <Text
                     style={[
                       styles.chipText,
-                      nivel === n && styles.chipTextAtivo,
+                      nivel === n.val && styles.chipTextAtivo,
                     ]}
                   >
-                    {n}
+                    {n.label}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -210,20 +235,20 @@ export default function Onboarding() {
             <View style={styles.chips}>
               {REFEICOES.map((r) => (
                 <TouchableOpacity
-                  key={r}
+                  key={r.val}
                   style={[
                     styles.chip,
-                    refeicaoPreferida === r && styles.chipAtivo,
+                    refeicaoPreferida === r.val && styles.chipAtivo,
                   ]}
-                  onPress={() => setRefeicaoPreferida(r)}
+                  onPress={() => setRefeicaoPreferida(r.val)}
                 >
                   <Text
                     style={[
                       styles.chipText,
-                      refeicaoPreferida === r && styles.chipTextAtivo,
+                      refeicaoPreferida === r.val && styles.chipTextAtivo,
                     ]}
                   >
-                    {r}
+                    {r.label}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -249,7 +274,10 @@ export default function Onboarding() {
     >
       <View style={styles.container}>
         {renderDots()}
-        <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
+        <ScrollView
+          contentContainerStyle={{ flexGrow: 1 }}
+          keyboardShouldPersistTaps="handled"
+        >
           {renderEtapa()}
         </ScrollView>
         <View style={styles.botoes}>
@@ -284,7 +312,8 @@ const styles = StyleSheet.create({
   dotAtivo: { backgroundColor: "#4CAF50", width: 20 },
   etapaContainer: { paddingHorizontal: 24, paddingBottom: 24 },
   titulo: { color: "#fff", fontSize: 22, fontWeight: "bold", marginBottom: 8 },
-  subtitulo: { color: "#aaa", fontSize: 15, marginBottom: 20 },
+  subtitulo: { color: "#aaa", fontSize: 15, marginBottom: 20, lineHeight: 22 },
+  opcional: { color: "#555", fontSize: 13 },
   label: { color: "#aaa", fontSize: 14, marginTop: 16, marginBottom: 8 },
   input: {
     backgroundColor: "#222",
